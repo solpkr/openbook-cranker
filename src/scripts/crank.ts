@@ -22,7 +22,8 @@ import {
 } from '@project-serum/serum';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Logger } from 'tslog';
-import axios  from "axios"
+import axios  from "axios";
+import readline from "readline";
 
 const URL_MARKETS_BY_VOLUME = 'https://openserum.io/api/serum/markets.json?min24hVolume=';
 const VOLUME_THRESHOLD = 1000;
@@ -98,6 +99,44 @@ setInterval(async () => {
     log.error(`Couldn't get blockhash: ${e}`);
   }
 },1000)
+
+//Inject into the log.info so that new logs do not interrupt input commands visibility
+// @ts-ignore
+log.info = function (args) {
+  // @ts-ignore
+  cli.output.write('\x1b[2K\r');
+  // @ts-ignore
+  log._handleLog('info', arguments);
+  // @ts-ignore
+  cli._refreshLine();
+}
+
+var cli = readline.createInterface(process.stdin, process.stdout);
+
+cli.setPrompt("crank # ");
+
+cli.on('line', function (line) {
+
+  if (line === 'quit' || line === 'exit') {
+    process.exit(0);
+  }
+
+  switch (line.split(" ")[0]) {
+    case'':
+      break;
+    case'uptime':
+      let date = new Date(0);
+      date.setSeconds(process.uptime());
+      let timeString = date.toISOString().substring(11, 19);
+      console.log(timeString)
+      break;
+    default:
+      console.log(`unknown command: ${line}`);
+  }
+  cli.prompt();
+});
+
+cli.prompt();
 
 async function run() {
   // list of markets to crank
