@@ -211,6 +211,9 @@ async function run() {
     (market) => market['_decoded'].eventQueue,
   );
 
+  //pass a minimum Context Slot to GMA
+  let minContextSlot = 0;
+
   // noinspection InfiniteLoopJS
   while (true) {
     try {
@@ -220,7 +223,12 @@ async function run() {
       const eventQueueAccts = await getMultipleAccounts(
         connection,
         eventQueuePks,
+        'processed',
+        minContextSlot,
       );
+
+     //increase the minContextSlot to avoid processing the same slot twice
+     minContextSlot = eventQueueAccts[0].context.slot + 1;
 
       for (let i = 0; i < eventQueueAccts.length; i++) {
         const accountInfo = eventQueueAccts[i].accountInfo;
@@ -318,11 +326,23 @@ async function run() {
 
       }
 
-      await sleep(interval);
+
 
     } catch (e) {
-      log.error(e);
+      if (e instanceof Error) {
+
+        switch (e.message){
+          case 'Minimum context slot has not been reached':
+            //lightweight warning message for known "safe" errors
+            log.warn(e.message);
+            break;
+          default:
+            log.error(e);
+        }
+
+      }
     }
+    await sleep(interval);
   }
 }
 
